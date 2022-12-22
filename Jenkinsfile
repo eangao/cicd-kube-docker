@@ -2,7 +2,7 @@ pipeline {
 
     agent any
 /*
-	tools {
+    tools {
         maven "maven3"
     }
 */
@@ -12,6 +12,7 @@ pipeline {
     }
 
     stages{
+
         stage('BUILD'){
             steps {
                 sh 'mvn clean install -DskipTests'
@@ -71,16 +72,16 @@ pipeline {
             }
         }
 
-        stage('Build App Image'){
+        stage('Build Docker App Image') {
             steps {
-                script{
-                    dockerImage = docker.build.registry + ":V$BUILD_NUMBER"
+                script {
+                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"
                 }
             }
         }
 
-        stage("Upload Image") {
-            steps{
+        stage('Upload image to Dockerhub') {
+            steps {
                 script {
                     docker.withRegistry('', registryCredential) {
                         dockerImage.push("V$BUILD_NUMBER")
@@ -90,19 +91,22 @@ pipeline {
             }
         }
 
-        stage('Remove Unused docker images') {
-            steps{
+        stage('Remove Unused Docker image') {
+            steps {
                 sh "docker rmi $registry:V$BUILD_NUMBER"
             }
         }
 
-        stage ('Kubernetes Deploy') {
+        stage('Kubernetes Deploy') {
             agent {label 'KOPS'}
-            steps{
-                sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
-            }
+                steps {
+                    sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
+                }
         }
 
 
+
     }
+
+
 }
